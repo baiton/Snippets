@@ -1,86 +1,91 @@
-const mongoose = require('mongoose');
-mongoose.Promise = require('bluebird');  //this lets me .then all my functions 
-mongoose.connect('mongodb://localhost:27017/Snippets');  //I will make your DB!
-//nick doesnt have the above here.  is it not needed in the dal?
-
-const Profile = require('./models/users')
-const Snippet = require('./models/snippet')
+const { Author, Snippet } = require('./models/snippet.js');
+const moment = require('moment')
 const jwt = require('jsonwebtoken')
 
-//getAllUsers
-//getProfileByUsername
-//getSnippetByUsername
-//getAllSnippets
-//getOneSnippet
-//searchSnippets
-//getAuthorAndSnippets
-//createSnippet
-
-
-function getAllProfiles(){
-  return Profile.find();
+function getAllAuthors(){
+  return Author.find();
 }
 
-function getProfileByUsername(username){
-  return Profile.findOne({username: username})
+function getAuthorByUsername(username){
+  return Author.findOne({ username: username});
+}
+
+function getSnipsByUsername(username){
+  return Snippet.findOne({ author: username});
 }
 
 function getAllSnippets(){
-  return Snippet.find();
+  return Snippet.find().populate('author');
 }
 
-function getSnippetByUsername(username){
-  return Snippet.findOne({profile: username})
+function getSingleSnippet(id){
+  return Snippet.findOne({ _id: id }).populate('author');
 }
 
-function getOneSnippet(id){
-  return Snippet.findOne({_id: id}).populate('author')
+function searchSnippets(search){
+
+  return Snippet.find({ $or: [
+    {title: {$regex : search, $options: "i" }},
+    { description: {$regex : search, $options: "i" }},
+    { content: {$regex : search, $options: "i" }},
+    { tags: {$regex : search, $options: "i" }},
+    { language: {$regex : search, $options: "i" }}
+    ]})
+    .populate('author');
 }
 
-function getProfileAndSnippets(username){
-  return Profile.findOne({username: username}).populate('snippets')
+function getAuthorAndSnips(username){
+  return Author.findOne({ username: username })
+    .populate('snippets')
 }
 
-function createProfile(info){
-    const newProfile = new Profile(info)
-    newProfile.save(function(err){
-      console.log('err from newProfile', err);
-    })
-    return Promise.resolve('success');  //what is this Promise?  where does it come from?
+function createAuthor(newUser){
+  const user = new Author(newUser);
+  user.save( function(err){
+    console.log(err);
+  })
+  return Promise.resolve('Success');
 }
 
-function createSnippet(newSnippet, token){
+function starSnippet(snipId, userId){
+
+}
+
+function createSnippet(newSnip, token) {
   let decoded = jwt.decode(token);
-  let splitTags = newSnippet.tags.split(' ');
-  let fullSnippet = {
-    title: newSnippet.title,
-    description: newSnippet.description,
-    content: newSnippet.content,
+  let splitTags = newSnip.tags.split(' ');
+  let fullSnip = {
+    title: newSnip.title,
+    description: newSnip.description,
+    content: newSnip.content,
     created: new Date(),
-    language: newSnippet.language,
-    profile: decoded.sub,  //ask about this .sub situation
+    language: newSnip.language,
+    stars: 0,
+    author: decoded.sub,
     tags: splitTags
   };
-  const snippet = new Snippet(fullSnippet)
-  snippet.save(function(err){
-    console.log("err from createSnippet", err);
+  const snippet = new Snippet(fullSnip);
+  snippet.save( function(err) {
+    console.log(err);
   })
-  getProfileByUsername(decoded.user).then((author) =>{
-    profile.snippets.push(snippet._id);
+
+  getAuthorByUsername(decoded.user).then((author)=>{
+    author.snippets.push(snippet._id);
     author.save(function(err){
-      console.log("err from adding snippet to User", err);
-    })
+      console.log(err);
+    });
   })
 }
 
 
 module.exports = {
-  getAllProfiles,
-  getProfileByUsername,
+  createAuthor,
+  getAllAuthors,
+  getAuthorByUsername,
+  getSnipsByUsername,
+  getAuthorAndSnips,
   getAllSnippets,
-  getSnippetByUsername,
-  getOneSnippet,
-  getProfileAndSnippets,
-  createProfile,
-  createSnippet
+  getSingleSnippet,
+  createSnippet,
+  searchSnippets
 }

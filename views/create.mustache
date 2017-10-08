@@ -1,58 +1,28 @@
 <!DOCTYPE html>
 <html>
-{{>_head}}
+  <head>
+    <title>Snip Feed</title>
+    {{>_header}}
+  </head>
+  <body>
+    {{>_nav}}
+    <header class="uni">
+      <h2>Snippet Feed</h2>
+      <hr>
+    </header>
+    <main class="createMain">
+      <section class="writeCont">
 
-<body class="link3">
-  <header>
-    <nav>
-      <ul class="">
-        <a class="" href="/profiles">
-          <li class="link1">Profiles</li>
-        </a>
-        <a class="" href="/snippets">
-          <li class="link2">All Snippets</li>
-        </a>
-        <a class="" href="/create">
-          <li class="link3">Create</li>
-        </a>
-        <a class="" href="/html">
-          <li class="link4">Html</li>
-        </a>
-        <a class="" href="/css">
-          <li class="link5">CSS</li>
-        </a>
-        <a class="" href="/javascript">
-          <li class="link6">Javascript</li>
-        </a>
-        <a class="" href="/nodejs">
-          <li class="link7">Nodejs</li>
-        </a>
-      </ul>
-    </nav>
-  </header>
-  <main>
-    <h1>Type Some Code You Want To Save!</h1>
-    <form class="" action="/create" method="post">
-      <input type="text" name="title" value="" placeholder="Title">
-      <textarea name="description" rows="1" cols="80" placeholder="Description"></textarea>
-      <textarea name="snippet" rows="8" cols="80" placeholder="Insert Code Here"></textarea>
-      <select class="" name="tags">
-          <option selected>Which Language?</option>
-          <option value="HTML">HTML</option>
-          <option value="CSS">CSS</option>
-          <option value="JavaScript">JavaScript</option>
-          <option value="Nodejs">Nodejs</option>
-        </select>
-      <button class="btn btn-secondary" type="submit" name="button">Submit</button>
-    </form>
-  </main>
-  <footer>
-    <a href="/logout">
-      <div class="btn btn-secondary">
-        Logout
-      </div>
-    </a>
-  </footer>
-</body>
-
+        <form class="snippetForm" action="/create" method="POST">
+          <h2>Create Snippet</h2>
+          <button type="submit" name="snipSubmit">Create Snip</button>
+          <input autocomplete="off" id="snipTitle" type="text" name="title" placeholder="Title of Snippet">
+          <input autocomplete="off" id="snipDesc" type="text" name="description" placeholder="Brief Description">
+          <textarea id="snipText" name="content" rows="12" cols="70" placeholder="Your Snippet"></textarea>
+          <input autocomplete="off" id="snipLang" type="text" name="language" placeholder="Programming Lanugage">
+          <input autocomplete="off" id="snipTags" type="text" name="tags" placeholder="Tags">
+        </form>
+      </section>
+    </main>
+  </body>
 </html>

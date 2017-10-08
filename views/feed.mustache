@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Snip Feed</title>
+    {{>_header}}
+  </head>
+  <body>
+    {{>_nav}}
+    <header class="uni">
+      <h2>Snippet Feed</h2>
+      <hr>
+    </header>
+    <main class="feedMain">
+      <section class="feedCont">
+        {{#snips}}
+        <div class="feedPost">
+          <div class="postInfo">
+            <h3>{{title}}</h3>
+            <p>{{description}}</p>
+          </div>
+          <div class="snipBg">
+            <p>{{content}}</p>
+          </div>
+          <p class="author">Created by: <a href="/author/{{author.username}}"> {{author.username}}</a></p><p class="date">{{created}}</p>
+        </div>
+        {{/snips}}
+      </section>
+
+    </main>
+  </body>
+</html>

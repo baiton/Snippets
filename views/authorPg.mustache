@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>{{author.info.name}}</title>
+    {{>_header}}
+  </head>
+  <body>
+    {{>_nav}}
+    <main>
+      <section class="authorInfo">
+        <img src={{author.info.avatar}} alt="">
+        <div class="infoText">
+          <h2>{{author.info.name}}</h2>
+          <p class="authorCity">{{author.info.city}}</p>
+          <p class="authorWeb">{{author.info.website}}</p>
+        </div>
+      </section>
+      <section class="authorSnippets">
+        <h3>Authors Snippets: </h3>
+        {{#author.snippets}}
+        <div class="feedPost">
+          <div class="postInfo">
+            <h4>{{title}}</h4>
+            <p>{{description}}</p>
+          </div>
+          <div class="snipBg">
+            <p>{{content}}</p>
+          </div>
+            <p class="date">{{created}}</p>
+        </div>
+        {{/author.snippets}}
+        {{^author.snippets}}
+          <p>No snippets yet!</p>
+        {{/author.snippets}}
+      </section>
+    </main>
+  </body>
+</html>

@@ -1,145 +1,154 @@
-const express = require('express')
-const mustacheExpress = require('mustache-express')
-const bodyParser = require('body-parser')
+const express = require('express');
 const app = express();
-// const session = require('express-session')
-const expressJWT = require('express-jwt')
-const jwt = require('jsonwebtoken')
-const Profile = require('./models/users')
-const roles = require('./controllers/roles.js')
-// console.log('Profile', Profile);
-const {createToken, ensureAuthenticated} = require('./controllers/authHelpers')
+const mustache = require('mustache-Express');
 const {
-  getAllProfiles,
-  getProfileByUsername,
+  createAuthor,
+  getAllAuthors,
+  getAuthorByUsername,
+  getSnipsByUsername,
+  getAuthorAndSnips,
   getAllSnippets,
-  getSnippetByUsername,
-  getOneSnippet,
-  getProfileAndSnippets,
-  createProfile,
-  createSnippet
-} = require('./dal.js')
+  createSnippet,
+  searchSnippets
+} = require('./dal');
+const bodyParser = require('body-parser');
+const session = require('express-session');
+const jwt = require('jsonwebtoken');
+const mongoose = require('mongoose')
+mongoose.Promise = require('bluebird')
+const {Author, Snippet} = require('./models/snippet.js');
+const { createToken, ensureAuthentication } = require('./controllers/authHelpers.js')
+require('dotenv').config()
 
-app.engine('mustache', mustacheExpress())
+
+// mongoose.connect('mongodb://localhost:27017/snippetdb');
+
+var MongoClient = require('mongodb').MongoClient;
+
+var uri = "mongodb://kay:CRRTLKCpwpKW4l2s@mycluster0-shard-00-00-wpeiv.mongodb.net:27017,mycluster0-shard-00-01-wpeiv.mongodb.net:27017,mycluster0-shard-00-02-wpeiv.mongodb.net:27017/admin?ssl=true&replicaSet=Mycluster0-shard-0&authSource=admin";
+MongoClient.connect(uri, function(err, db) {
+  db.close();
+});
+
+app.engine('mustache', mustache())
 app.set('view engine', 'mustache')
 app.set('views', __dirname + '/views')
 
-app.use(bodyParser.json())
-app.use(bodyParser.urlencoded({extended: true}))
-app.use(express.static('public'));
 
-// app.use(expressJWT({secret: 'cows have spots'}).unless({path: ['/login']}));
+////////////// MIDDLEWARE //////////////
 
-// ---------------homepage----------------
+app.use(express.static('./frontend/public'));
+app.use(bodyParser.json());
+app.use(bodyParser.urlencoded({
+  extended: false
+}));
+app.use(session({
+  secret: 'mudlark',
+  resave: false,
+  saveUninitialized: true
+}))
+
+
+////////////////// ROUTES ///////////////
+/*
+login -get -post
+feed -get -post(search)
+snippet -get
+author -get
+author/starred -get
+author(self) -get -post
+create snippet -get -post
+*/
+
+
+//////////// Content Routes /////////////////
+
+app.get('/feed', ensureAuthentication, (req, res) => {
+  getAllSnippets().then((snippets) => {
+    let decoded = jwt.decode(req.session.jwtToken.token)
+    console.log(decoded);
+    res.render('feed', {snips: snippets.reverse()})
+  })
+})
+
+app.post('/feed', ensureAuthentication, (req, res) => {
+  searchSnippets(req.body.searchInput).then((snippets) => {
+    res.render('feed', {snips: snippets.reverse()})
+  })
+})
+
+app.get('/author/:username', ensureAuthentication, ({params}, res) => {
+  getAuthorAndSnips(params.username).then((foundAuthor) => {
+    res.render('authorPg', {author: foundAuthor});
+  })
+}) //make this include a self page
+
+app.get('/authors', ensureAuthentication, (req, res) => {
+  getAllAuthors().then((authors) => {
+    res.render('authors', {authors})
+  })
+})
+
+app.get('/create', ensureAuthentication, (req, res) => {
+    res.render('create')
+})
+app.post('/create', ensureAuthentication, (req, res) => {
+    createSnippet(req.body, req.session.jwtToken.token);
+
+    res.redirect('/feed')
+})
+
+app.get('/logout', (req, res) => {
+  req.session.jwtToken = null
+  res.redirect('/login')
+})
+
+
+
+////////// LOGIN ROUTES ////////////
+
 app.get('/', (req, res) => {
-  //if not logged in show welcome/about info
-  res.render('./home')
+  if(req.session.jwtToken){
+    res.redirect('/feed')
+  }
+  res.redirect('/login')
+
 })
 
-// --------------Login---------------------
+app.get('/signup', (req, res) => {
+  res.render('signup');
+})
+
+app.post('/signup', (req, res) => {
+  createAuthor(req.body).then((newAuthor) => {
+    res.redirect('/login')
+  })
+})
+
 app.get('/login', (req, res) => {
-  res.render('./login')
+  res.render('login')
 })
-
-// I need help with the comparing login credentials to my db
-
-// router.route('/').post((req, res) => {
-//   User.findOne({ email: req.body.email }, '+password', function (
-//     err,
-//     user,
-//     next
-//   ) {
-//     if (err) return next(err)
-//     if (!user) {
-//       return res.status(401).send({ message: 'Wrong email and/or password' })
-//     }
-//     user.comparePassword(req.body.password, user.password, function (
-//       err,
-//       isMatch
-//     ) {
-//       console.log('is match', isMatch)
-//       if (!isMatch) {
-//         return res.status(401).send({ message: 'Wrong email and/or password' })
-//       }
-//       res.send({ token: createToken(user), roles: user.roles })
-//     })
-//   })
-// })
 
 app.post('/login', (req, res) => {
-  Profile.findOne({
-    username: req.body.username
-  }, '+password', (err, user, next) => {
+  Author.findOne({ username: req.body.username }, 'username password', function (err, user, next) {
+    if (err) return next(err)
     if (!user) {
-      return res.status(401).send({message: 'Wrong email and/or password'})
+      return res.status(401).send({ message: 'Wrong email and/or password' })
     }
-    user.comparePassword(req.body.password, user.password, (err, isMatch) => {
-      console.log('is Match', isMatch)
+    user.comparePassword(req.body.password, user.password, function ( err, isMatch ) {
+      console.log('is match', isMatch)
       if (!isMatch) {
-        return res.status(401).send({message: "Wrong email and/or password"})
+        return res.status(401).send({ message: 'Wrong email and/or password' })
       }
-      res.send({token: createToken(user)})
+      let token = { token: createToken(user)};
+      req.session.jwtToken = token;
+      res.redirect('/');
     })
   })
 })
-// --------------Register------------------
-app.get('/register', (req, res) => {
-  //requires login creditials.
-  res.render('./register')
-})
 
-app.post('/registered', (req, res) => {
-  //create account for user the redirect to profile page
-  createProfile(req.body).then((account) => {
-    res.redirect('/snippets')
-  })
-})
 
-// PICK UP HERE WHEN YOU RETURN!!!!!!!
-app.get('/logout', (req, res) => {
-  // ========================================
-  // make a function that will log out the user????????????
-  // ========================================
-
-  res.redirect("/login")
-})
-
-//---------------main-----------------------
-app.get('/snippets', ensureAuthenticated, (req, res) => {
-  //function goes here
-  //contains a navigation directory with indications on where to go
-  res.render('./snippets')
-})
-
-app.get('/create', (req, res) => {
-  res.render('./create')
-})
-
-app.post('/create', (req, res) => {
-  createSnippet(req.body)
-  res.redirect('./snippets')
-})
-
-app.get('/profiles', (req, res) => {
-  res.render('./directory')
-})
-
-app.get('/css', (req, res) => {
-  res.render('./css')
-})
-
-app.get('/javascript', (req, res) => {
-  res.render('./javascript')
-})
-
-app.get('/html', (req, res) => {
-  res.render('./html')
-})
-
-app.get('/nodejs', (req, res) => {
-  res.render('./nodejs')
-})
-
-app.listen(3000, function() {
-  console.log('server started on port: 3000')
+app.set('port', process.env.PORT || 3000)
+app.listen(app.get('port'), function(req, res){
+  console.log("App started on 3000.")
 })
